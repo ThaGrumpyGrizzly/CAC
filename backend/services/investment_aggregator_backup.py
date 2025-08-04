@@ -1,21 +1,17 @@
-﻿from typing import Dict, List, Optional
-from datetime import datetime
+from typing import Dict, List, Optional
 from database import SessionLocal, PurchaseDB, InvestmentDB
 from services.finance_api import get_current_price
 from services.currency_converter import detect_currency_from_ticker
 from services.analytics import calculate_profit, calculate_profit_percentage
 
-def get_investment_summary(ticker: str, user_id: str) -> Optional[Dict]:
+def get_investment_summary(ticker: str) -> Optional[Dict]:
     """
-    Get aggregated summary for a specific ticker for a specific user
+    Get aggregated summary for a specific ticker
     """
     db = SessionLocal()
     try:
-        # Get all purchases for this ticker and user
-        purchases = db.query(PurchaseDB).filter(
-            PurchaseDB.ticker == ticker,
-            PurchaseDB.user_id == user_id
-        ).all()
+        # Get all purchases for this ticker
+        purchases = db.query(PurchaseDB).filter(PurchaseDB.ticker == ticker).all()
         
         if not purchases:
             return None
@@ -38,7 +34,7 @@ def get_investment_summary(ticker: str, user_id: str) -> Optional[Dict]:
             # Validate that current_price is not NaN
             if current_price is not None and (current_price != current_price or current_price <= 0):
                 current_price = None
-                print(f'Warning: Invalid current price for {ticker}: {current_price_data[0]}')
+                print(f"Warning: Invalid current price for {ticker}: {current_price_data[0]}")
         except:
             current_price = None
             original_price = None
@@ -93,42 +89,42 @@ def get_investment_summary(ticker: str, user_id: str) -> Optional[Dict]:
     finally:
         db.close()
 
-def get_all_investment_summaries(user_id: str) -> List[Dict]:
+def get_all_investment_summaries() -> List[Dict]:
     """
-    Get aggregated summaries for all tickers for a specific user
+    Get aggregated summaries for all tickers
     """
     db = SessionLocal()
     try:
-        # Get all unique tickers for this user
-        tickers = db.query(PurchaseDB.ticker).filter(
-            PurchaseDB.user_id == user_id
-        ).distinct().all()
+        # Get all unique tickers
+        tickers = db.query(PurchaseDB.ticker).distinct().all()
         ticker_list = [t[0] for t in tickers]
         
         summaries = []
         for ticker in ticker_list:
-            summary = get_investment_summary(ticker, user_id)
+            summary = get_investment_summary(ticker)
             if summary:
                 summaries.append(summary)
         
         return summaries
+        
     finally:
         db.close()
 
-def add_purchase(purchase_data: Dict, user_id: str) -> Dict:
+def add_purchase(purchase_data: Dict) -> Dict:
     """
-    Add a new purchase for a specific user
+    Add a new purchase to the database
     """
     db = SessionLocal()
     try:
+        # Create new purchase
         purchase = PurchaseDB(
-            user_id=user_id,
             ticker=purchase_data['ticker'],
             amount=purchase_data['amount'],
             price_per_share=purchase_data['price_per_share'],
             date=purchase_data['date'],
-            costs=purchase_data.get('costs', 0.0)
+            costs=purchase_data['costs']
         )
+        
         db.add(purchase)
         db.commit()
         db.refresh(purchase)
@@ -142,94 +138,89 @@ def add_purchase(purchase_data: Dict, user_id: str) -> Dict:
             'costs': purchase.costs,
             'created_at': purchase.created_at.isoformat()
         }
+        
     finally:
         db.close()
 
-def delete_purchase(purchase_id: str, user_id: str) -> bool:
+def delete_purchase(purchase_id: str) -> bool:
     """
-    Delete a purchase for a specific user
+    Delete a specific purchase
     """
     db = SessionLocal()
     try:
-        purchase = db.query(PurchaseDB).filter(
-            PurchaseDB.id == purchase_id,
-            PurchaseDB.user_id == user_id
-        ).first()
-        
+        purchase = db.query(PurchaseDB).filter(PurchaseDB.id == purchase_id).first()
         if purchase:
             db.delete(purchase)
             db.commit()
             return True
         return False
+        
     finally:
         db.close()
 
-def update_purchase(purchase_id: str, purchase_data: Dict, user_id: str) -> Optional[Dict]:
+def update_purchase(purchase_id: str, purchase_data: Dict) -> Optional[Dict]:
     """
-    Update a purchase for a specific user
-    """
-    db = SessionLocal()
-    try:
-        purchase = db.query(PurchaseDB).filter(
-            PurchaseDB.id == purchase_id,
-            PurchaseDB.user_id == user_id
-        ).first()
-        
-        if purchase:
-            purchase.amount = purchase_data['amount']
-            purchase.price_per_share = purchase_data['price_per_share']
-            purchase.date = purchase_data['date']
-            purchase.costs = purchase_data.get('costs', 0.0)
-            purchase.updated_at = datetime.utcnow()
-            
-            db.commit()
-            db.refresh(purchase)
-            
-            return {
-                'id': purchase.id,
-                'ticker': purchase.ticker,
-                'amount': purchase.amount,
-                'price_per_share': purchase.price_per_share,
-                'date': purchase.date,
-                'costs': purchase.costs,
-                'created_at': purchase.created_at.isoformat()
-            }
-        return None
-    finally:
-        db.close()
-
-def migrate_old_investments(user_id: str):
-    """
-    Migrate old investments to purchases for a specific user
+    Update a specific purchase
     """
     db = SessionLocal()
     try:
-        # Get all old investments
-        old_investments = db.query(InvestmentDB).all()
+        purchase = db.query(PurchaseDB).filter(PurchaseDB.id == purchase_id).first()
+        if not purchase:
+            return None
         
-        for investment in old_investments:
-            # Check if this investment already exists as a purchase for this user
-            existing_purchase = db.query(PurchaseDB).filter(
-                PurchaseDB.ticker == investment.ticker,
-                PurchaseDB.user_id == user_id,
-                PurchaseDB.amount == investment.amount,
-                PurchaseDB.price_per_share == investment.price_per_share,
-                PurchaseDB.date == investment.date
-            ).first()
-            
-            if not existing_purchase:
-                # Create new purchase
-                purchase = PurchaseDB(
-                    user_id=user_id,
-                    ticker=investment.ticker,
-                    amount=investment.amount,
-                    price_per_share=investment.price_per_share,
-                    date=investment.date,
-                    costs=investment.costs
-                )
-                db.add(purchase)
+        # Update the purchase fields
+        purchase.amount = purchase_data['amount']
+        purchase.price_per_share = purchase_data['price_per_share']
+        purchase.date = purchase_data['date']
+        purchase.costs = purchase_data['costs']
         
         db.commit()
-        print(f'Migrated {len(old_investments)} investments for user {user_id}')
+        db.refresh(purchase)
+        
+        return {
+            'id': purchase.id,
+            'ticker': purchase.ticker,
+            'amount': purchase.amount,
+            'price_per_share': purchase.price_per_share,
+            'date': purchase.date,
+            'costs': purchase.costs,
+            'created_at': purchase.created_at.isoformat()
+        }
+        
     finally:
         db.close()
+
+def migrate_old_investments():
+    """
+    Migrate old investment records to the new purchase system
+    """
+    db = SessionLocal()
+    try:
+        # Check if there are old investments to migrate
+        old_investments = db.query(InvestmentDB).all()
+        
+        if not old_investments:
+            return {"message": "No old investments to migrate"}
+        
+        migrated_count = 0
+        for old_inv in old_investments:
+            # Check if we already have purchases for this ticker
+            existing_purchases = db.query(PurchaseDB).filter(PurchaseDB.ticker == old_inv.ticker).count()
+            
+            if existing_purchases == 0:
+                # Create purchase from old investment
+                purchase = PurchaseDB(
+                    ticker=old_inv.ticker,
+                    amount=old_inv.amount,
+                    price_per_share=old_inv.price_per_share,
+                    date=old_inv.date,
+                    costs=old_inv.costs
+                )
+                db.add(purchase)
+                migrated_count += 1
+        
+        db.commit()
+        return {"message": f"Migrated {migrated_count} old investments to purchases"}
+        
+    finally:
+        db.close() 

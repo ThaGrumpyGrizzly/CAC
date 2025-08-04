@@ -1,39 +1,25 @@
-﻿from sqlalchemy import create_engine, Column, Float, String, DateTime, Integer, ForeignKey
+from sqlalchemy import create_engine, Column, Float, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker
 import os
 from datetime import datetime
 import uuid
 
 # Database configuration
 # For development, use SQLite by default
-if os.getenv('USE_SQLITE', 'true').lower() == 'true':
-    DATABASE_URL = 'sqlite:///./investment_tracker.db'
+if os.getenv("USE_SQLITE", "true").lower() == "true":
+    DATABASE_URL = "sqlite:///./investment_tracker.db"
 else:
-    DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/investment_db')
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/investment_db")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-class UserDB(Base):
-    __tablename__ = 'users'
-    
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    email = Column(String, unique=True, nullable=False, index=True)
-    username = Column(String, unique=True, nullable=False, index=True)
-    hashed_password = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationship to purchases
-    purchases = relationship('PurchaseDB', back_populates='user')
-
 class PurchaseDB(Base):
-    __tablename__ = 'purchases'
+    __tablename__ = "purchases"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey('users.id'), nullable=False)
     ticker = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     price_per_share = Column(Float, nullable=False)
@@ -41,13 +27,10 @@ class PurchaseDB(Base):
     costs = Column(Float, nullable=False, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationship to user
-    user = relationship('UserDB', back_populates='purchases')
 
 # Keep the old table for backward compatibility during migration
 class InvestmentDB(Base):
-    __tablename__ = 'investments'
+    __tablename__ = "investments"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     ticker = Column(String, nullable=False)
@@ -69,6 +52,6 @@ def create_tables():
     Base.metadata.create_all(bind=engine)
 
 # Initialize database tables
-if __name__ == '__main__':
+if __name__ == "__main__":
     create_tables()
-    print('Database tables created successfully!')
+    print("Database tables created successfully!") 

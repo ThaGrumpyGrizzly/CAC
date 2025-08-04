@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
 
 const InvestmentContext = createContext()
@@ -15,47 +15,16 @@ export const InvestmentProvider = ({ children }) => {
   const [investments, setInvestments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState(null)
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-
-  // Check if user is authenticated on mount
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      setIsAuthenticated(true)
-      fetchInvestments()
-    } else {
-      setLoading(false)
-    }
-  }, [])
-
-  // Create axios instance with auth header
-  const createAuthAxios = () => {
-    const token = localStorage.getItem('token')
-    return axios.create({
-      baseURL: API_BASE_URL,
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-  }
 
   const fetchInvestments = async () => {
     try {
       setLoading(true)
       setError(null)
-      const authAxios = createAuthAxios()
-      const response = await authAxios.get('/investments/summary')
+      const response = await axios.get(`${API_BASE_URL}/investments/summary`)
       setInvestments(response.data)
     } catch (err) {
-      if (err.response?.status === 401) {
-        // Token expired or invalid
-        localStorage.removeItem('token')
-        setIsAuthenticated(false)
-        setUser(null)
-      }
       setError('Failed to fetch investments')
       console.error('Error fetching investments:', err)
     } finally {
@@ -66,8 +35,7 @@ export const InvestmentProvider = ({ children }) => {
   const addPurchase = async (purchaseData) => {
     try {
       setError(null)
-      const authAxios = createAuthAxios()
-      const response = await authAxios.post('/purchase', purchaseData)
+      const response = await axios.post(`${API_BASE_URL}/purchase`, purchaseData)
       await fetchInvestments() // Refresh the list
       return response.data
     } catch (err) {
@@ -80,8 +48,7 @@ export const InvestmentProvider = ({ children }) => {
   const deletePurchase = async (purchaseId) => {
     try {
       setError(null)
-      const authAxios = createAuthAxios()
-      await authAxios.delete(`/purchase/${purchaseId}`)
+      await axios.delete(`${API_BASE_URL}/purchase/${purchaseId}`)
       await fetchInvestments() // Refresh the list
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Failed to delete purchase'
@@ -93,8 +60,7 @@ export const InvestmentProvider = ({ children }) => {
   const updatePurchase = async (purchaseId, purchaseData) => {
     try {
       setError(null)
-      const authAxios = createAuthAxios()
-      const response = await authAxios.put(`/purchase/${purchaseId}`, purchaseData)
+      const response = await axios.put(`${API_BASE_URL}/purchase/${purchaseId}`, purchaseData)
       await fetchInvestments() // Refresh the list
       return response.data
     } catch (err) {
@@ -107,50 +73,13 @@ export const InvestmentProvider = ({ children }) => {
   const getInvestmentDetails = async (ticker) => {
     try {
       setError(null)
-      const authAxios = createAuthAxios()
-      const response = await authAxios.get(`/investment/${ticker}/summary`)
+      const response = await axios.get(`${API_BASE_URL}/investment/${ticker}/summary`)
       return response.data
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Failed to fetch investment details'
       setError(errorMessage)
       throw new Error(errorMessage)
     }
-  }
-
-  const login = async (email, password) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/login`, {
-        email,
-        password
-      })
-      
-      localStorage.setItem('token', response.data.access_token)
-      setIsAuthenticated(true)
-      await fetchInvestments()
-      return response.data
-    } catch (err) {
-      throw new Error(err.response?.data?.detail || 'Login failed')
-    }
-  }
-
-  const register = async (email, username, password) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/register`, {
-        email,
-        username,
-        password
-      })
-      return response.data
-    } catch (err) {
-      throw new Error(err.response?.data?.detail || 'Registration failed')
-    }
-  }
-
-  const logout = () => {
-    localStorage.removeItem('token')
-    setIsAuthenticated(false)
-    setUser(null)
-    setInvestments([])
   }
 
   // Keep old methods for backward compatibility
@@ -166,22 +95,21 @@ export const InvestmentProvider = ({ children }) => {
     setError(null)
   }
 
+  useEffect(() => {
+    fetchInvestments()
+  }, [])
+
   const value = {
     investments,
     loading,
     error,
-    isAuthenticated,
-    user,
     fetchInvestments,
+    addInvestment,
     addPurchase,
+    deleteInvestment,
     deletePurchase,
     updatePurchase,
     getInvestmentDetails,
-    login,
-    register,
-    logout,
-    addInvestment,
-    deleteInvestment,
     clearError
   }
 
@@ -190,4 +118,4 @@ export const InvestmentProvider = ({ children }) => {
       {children}
     </InvestmentContext.Provider>
   )
-}
+} 
