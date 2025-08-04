@@ -6,11 +6,12 @@ from datetime import datetime
 import uuid
 
 # Database configuration
-# For development, use SQLite by default
-if os.getenv('USE_SQLITE', 'true').lower() == 'true':
-    DATABASE_URL = 'sqlite:///./investment_tracker.db'
-else:
-    DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/investment_db')
+# Use Railway's DATABASE_URL if available, otherwise use SQLite for development
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./investment_tracker.db')
+
+# If DATABASE_URL is from Railway (PostgreSQL), we need to handle the format
+if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
