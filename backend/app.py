@@ -50,7 +50,7 @@ def read_root():
 @app.get('/health')
 def health_check():
     try:
-        # Test database connection
+        # Test database connection with proper SQLAlchemy text() wrapper
         from database import SessionLocal
         from sqlalchemy import text
         db = SessionLocal()
