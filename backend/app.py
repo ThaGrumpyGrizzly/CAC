@@ -41,7 +41,15 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "Investment Tracker API"}
+    try:
+        # Test database connection
+        from database import SessionLocal
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        db.close()
+        return {"status": "healthy", "service": "Investment Tracker API", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "service": "Investment Tracker API", "database": "error", "error": str(e)}
 
 @app.post("/investment")
 def add_investment(investment: Investment, db: Session = Depends(get_db)):
@@ -135,7 +143,9 @@ def get_investments_summary():
         summaries = get_all_investment_summaries()
         return summaries
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"Error in get_investments_summary: {e}")
+        # Return empty list instead of error if no investments exist
+        return []
 
 @app.get("/investment/{ticker}/summary")
 def get_investment_summary_endpoint(ticker: str):
