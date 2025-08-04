@@ -14,7 +14,7 @@ from services.investment_aggregator import (
 from database import get_db, InvestmentDB
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from typing import List
+from typing import List, Dict
 
 app = FastAPI(title="Investment Tracker API", version="1.0.0")
 
