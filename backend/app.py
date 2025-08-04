@@ -239,7 +239,7 @@ def _get_fallback_search_results(query: str) -> List[Dict]:
         {"ticker": "VWRL.L", "name": "Vanguard FTSE All-World UCITS ETF", "type": "ETF"},
         {"ticker": "IWDA.L", "name": "iShares Core MSCI World UCITS ETF", "type": "ETF"},
         {"ticker": "BEL.BR", "name": "BEL 20 Index", "type": "Index"},
-        {"ticker": "BIRG.IE", "name": "BlackRock iShares MSCI World UCITS ETF", "type": "ETF"},
+        {"ticker": "BIRG.IE", "name": "Bank of Ireland Group PLC", "type": "Stock"},
     ]
     
     # Filter results based on query

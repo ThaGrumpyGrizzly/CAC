@@ -176,7 +176,9 @@ def _get_mock_price(ticker: str) -> float:
         
         # UK stocks (GBP)
         'BIRG.L': (8, 12),  # Bank of Ireland Group PLC
-        'BIRG.IE': (8, 12),  # Bank of Ireland Group PLC (old ticker)
+        
+        # Irish stocks (EUR)
+        'BIRG.IE': (8, 12),  # Bank of Ireland Group PLC (Irish exchange)
         
         # ETFs
         'SPY': (400, 500),  # USD
@@ -200,8 +202,10 @@ def _get_mock_price(ticker: str) -> float:
         price = random.uniform(min_price, max_price)
     else:
         # Generate a realistic price range based on ticker characteristics
-        if '.BR' in ticker or '.AS' in ticker:  # European stocks
+        if '.BR' in ticker or '.AS' in ticker or '.IE' in ticker:  # European stocks (EUR)
             base_price = random.uniform(20, 100)
+        elif '.L' in ticker:  # UK stocks (GBP)
+            base_price = random.uniform(5, 15)
         elif 'ETF' in ticker or ticker in ['SPY', 'QQQ', 'VTI', 'VXUS', 'BND', 'GLD']:
             base_price = random.uniform(50, 500)
         else:  # US stocks
