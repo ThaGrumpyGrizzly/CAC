@@ -196,7 +196,10 @@ def search_investments(query: str):
         results = search_stocks(query)
         return {"results": results}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"Search error for query '{query}': {e}")
+        # Return fallback results instead of error
+        fallback_results = _get_fallback_search_results(query)
+        return {"results": fallback_results}
 
 @app.get("/suggestions")
 def get_suggestions(query: str):
@@ -206,6 +209,47 @@ def get_suggestions(query: str):
         return {"suggestions": suggestions}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+def _get_fallback_search_results(query: str) -> List[Dict]:
+    """Fallback search results when external APIs fail"""
+    query_lower = query.lower()
+    
+    # Common stocks and ETFs database
+    stock_database = [
+        {"ticker": "AAPL", "name": "Apple Inc.", "type": "Stock"},
+        {"ticker": "MSFT", "name": "Microsoft Corporation", "type": "Stock"},
+        {"ticker": "GOOGL", "name": "Alphabet Inc.", "type": "Stock"},
+        {"ticker": "AMZN", "name": "Amazon.com Inc.", "type": "Stock"},
+        {"ticker": "TSLA", "name": "Tesla Inc.", "type": "Stock"},
+        {"ticker": "META", "name": "Meta Platforms Inc.", "type": "Stock"},
+        {"ticker": "NVDA", "name": "NVIDIA Corporation", "type": "Stock"},
+        {"ticker": "NFLX", "name": "Netflix Inc.", "type": "Stock"},
+        {"ticker": "ASML.AS", "name": "ASML Holding N.V.", "type": "Stock"},
+        {"ticker": "SAP.DE", "name": "SAP SE", "type": "Stock"},
+        {"ticker": "LVMH.PA", "name": "LVMH Moët Hennessy Louis Vuitton", "type": "Stock"},
+        {"ticker": "KBC.BR", "name": "KBC Group NV", "type": "Stock"},
+        {"ticker": "INGA.AS", "name": "ING Groep N.V.", "type": "Stock"},
+        {"ticker": "ABI.BR", "name": "Anheuser-Busch InBev SA/NV", "type": "Stock"},
+        {"ticker": "SPY", "name": "SPDR S&P 500 ETF Trust", "type": "ETF"},
+        {"ticker": "QQQ", "name": "Invesco QQQ Trust", "type": "ETF"},
+        {"ticker": "VTI", "name": "Vanguard Total Stock Market ETF", "type": "ETF"},
+        {"ticker": "VXUS", "name": "Vanguard Total International Stock ETF", "type": "ETF"},
+        {"ticker": "BND", "name": "Vanguard Total Bond Market ETF", "type": "ETF"},
+        {"ticker": "GLD", "name": "SPDR Gold Shares", "type": "ETF"},
+        {"ticker": "VWRL.L", "name": "Vanguard FTSE All-World UCITS ETF", "type": "ETF"},
+        {"ticker": "IWDA.L", "name": "iShares Core MSCI World UCITS ETF", "type": "ETF"},
+        {"ticker": "BEL.BR", "name": "BEL 20 Index", "type": "Index"},
+        {"ticker": "BIRG.IE", "name": "BlackRock iShares MSCI World UCITS ETF", "type": "ETF"},
+    ]
+    
+    # Filter results based on query
+    results = []
+    for stock in stock_database:
+        if (query_lower in stock["ticker"].lower() or 
+            query_lower in stock["name"].lower()):
+            results.append(stock)
+    
+    return results[:10]  # Return top 10 results
 
 if __name__ == "__main__":
     import uvicorn

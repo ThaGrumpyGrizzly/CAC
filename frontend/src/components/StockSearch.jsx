@@ -31,7 +31,8 @@ const StockSearch = ({ onSelect, placeholder = "Search stocks or ETFs..." }) => 
 
       setLoading(true)
       try {
-        const response = await axios.get(`http://localhost:8000/search?query=${encodeURIComponent(query)}`)
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+        const response = await axios.get(`${API_BASE_URL}/search?query=${encodeURIComponent(query)}`)
         setResults(response.data.results || [])
         setIsOpen(true)
       } catch (error) {
