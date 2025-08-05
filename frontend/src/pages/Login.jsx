@@ -15,7 +15,7 @@ const Login = () => {
     setError('')
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://cac-production.up.railway.app'
       const response = await axios.post(`${API_BASE_URL}/login`, {
         email,
         password
