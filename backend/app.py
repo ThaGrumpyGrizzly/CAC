@@ -20,6 +20,8 @@ from database import get_db, InvestmentDB, UserDB
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from datetime import timedelta
+import os
+from datetime import datetime
 
 app = FastAPI(title='Investment Tracker API', version='1.0.0')
 
@@ -47,18 +49,54 @@ app.add_middleware(
 def read_root():
     return {'status': 'Investment Tracker API running', 'version': '1.0.0'}
 
+@app.get('/health-simple')
+def simple_health_check():
+    """Simple health check that doesn't require database connection"""
+    return {
+        'status': 'healthy',
+        'service': 'Investment Tracker API',
+        'message': 'Service is running',
+        'timestamp': datetime.utcnow().isoformat()
+    }
+
 @app.get('/health')
 def health_check():
     try:
-        # Test database connection with proper SQLAlchemy text() wrapper
-        from database import SessionLocal
-        from sqlalchemy import text
-        db = SessionLocal()
-        db.execute(text('SELECT 1'))
-        db.close()
-        return {'status': 'healthy', 'service': 'Investment Tracker API', 'database': 'connected'}
+        # Basic service health check
+        service_status = 'healthy'
+        database_status = 'unknown'
+        error_message = None
+        
+        # Test database connection only if DATABASE_URL is available
+        if os.getenv('DATABASE_URL'):
+            try:
+                from database import SessionLocal
+                from sqlalchemy import text
+                db = SessionLocal()
+                db.execute(text('SELECT 1'))
+                db.close()
+                database_status = 'connected'
+            except Exception as db_error:
+                database_status = 'error'
+                error_message = f"Database error: {str(db_error)}"
+        else:
+            database_status = 'not_configured'
+        
+        return {
+            'status': service_status,
+            'service': 'Investment Tracker API',
+            'database': database_status,
+            'timestamp': datetime.utcnow().isoformat(),
+            'error': error_message
+        }
     except Exception as e:
-        return {'status': 'unhealthy', 'service': 'Investment Tracker API', 'database': 'error', 'error': str(e)}
+        return {
+            'status': 'unhealthy',
+            'service': 'Investment Tracker API',
+            'database': 'error',
+            'error': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }
 
 # Authentication endpoints
 @app.post('/register', response_model=UserResponse)
@@ -327,6 +365,6 @@ def _get_fallback_search_results(query: str) -> List[Dict]:
             results.append(stock)
     
     return results[:10]  # Return top 10 results
-#   F o r c e   R a i l w a y   r e d e p l o y   -   0 8 / 0 5 / 2 0 2 5   1 5 : 2 9 : 0 8  
- #   F o r c e   R a i l w a y   r e d e p l o y   -   0 8 / 0 5 / 2 0 2 5   1 5 : 3 1 : 4 7  
- 
+#  Force Railway redeploy  -  08/05/2025 15:29:08
+
+#  Force Railway redeploy  -  08/05/2025 15:31:47

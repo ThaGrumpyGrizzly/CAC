@@ -1,0 +1,5 @@
+[33m5fecd2f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix: Update database config for Railway PostgreSQL and add psycopg2 dependency
+[33me27dca5[m Fix: Add PyJWT dependency to requirements.txt for Railway deployment
+[33m3ecff11[m Add comprehensive Profile page with user preferences and settings
+[33mfcf0156[m Fix BIRG.IE currency detection - now correctly shows EUR instead of GBP
+[33m57c9d6a[m Fix missing Dict import in backend
