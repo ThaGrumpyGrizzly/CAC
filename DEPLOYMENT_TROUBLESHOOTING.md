@@ -1,5 +1,47 @@
 # Railway Deployment Troubleshooting Guide
 
+## Login Issues
+
+### Problem: Users can register but cannot log in
+
+**Common Causes:**
+1. **Frontend Environment Configuration**: Missing or incorrect API URL
+2. **Database Connection**: Users not being saved properly
+3. **CORS Issues**: Frontend can't communicate with backend
+4. **Authentication Service**: Wrong auth service being used
+
+**Solutions:**
+
+#### 1. Check Frontend Environment
+Create a `.env` file in the frontend directory:
+```bash
+# frontend/.env
+VITE_API_BASE_URL=https://your-backend-url.railway.app
+```
+
+#### 2. Verify Database Connection
+- Check if DATABASE_URL is set in Railway
+- Verify tables are created properly
+- Test database connection manually
+
+#### 3. Check Browser Console
+- Open browser developer tools (F12)
+- Look for network errors in Console tab
+- Check Network tab for failed requests
+
+#### 4. Test Backend Directly
+```bash
+# Test login endpoint
+curl -X POST https://your-backend-url.railway.app/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+```
+
+#### 5. Debug Authentication Flow
+- Check if users are being saved to database
+- Verify password hashing is working
+- Ensure JWT tokens are being generated
+
 ## Health Check Issues
 
 The health check is failing because the application is trying to connect to a database that might not be properly configured on Railway.
