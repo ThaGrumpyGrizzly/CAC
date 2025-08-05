@@ -18,6 +18,7 @@ const Login = () => {
       const API_BASE_URL = 'https://cac-production.up.railway.app'
       console.log('Using API URL:', API_BASE_URL)
       console.log('Sending login data:', JSON.stringify({ email, password }))
+      console.log('Making request to:', `${API_BASE_URL}/login`)
       const response = await axios.post(`${API_BASE_URL}/login`, {
         email,
         password
