@@ -12,7 +12,7 @@ from services.investment_aggregator import (
     update_purchase,
     migrate_old_investments
 )
-from services.auth import (
+from services.auth_simple import (
     get_password_hash, authenticate_user, create_access_token, 
     get_current_user, get_user_by_email, get_user_by_username
 )
