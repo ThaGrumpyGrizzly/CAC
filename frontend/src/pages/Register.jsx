@@ -31,7 +31,8 @@ const Register = () => {
     }
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      const API_BASE_URL = 'https://cac-production.up.railway.app'
+      console.log('Using API URL:', API_BASE_URL)
       const response = await axios.post(`${API_BASE_URL}/register`, {
         email,
         username,
