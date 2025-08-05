@@ -33,7 +33,7 @@ const Register = () => {
     try {
       const API_BASE_URL = 'https://cac-production.up.railway.app'
       console.log('Using API URL:', API_BASE_URL)
-      console.log('Sending registration data:', { email, username, password })
+      console.log('Sending registration data:', JSON.stringify({ email, username, password }))
       const response = await axios.post(`${API_BASE_URL}/register`, {
         email,
         username,
@@ -43,7 +43,7 @@ const Register = () => {
       // Registration successful, redirect to login
       navigate('/login', { state: { message: 'Registration successful! Please log in.' } })
     } catch (error) {
-      console.log('Registration error:', error.response?.data || error.message)
+      console.log('Registration error:', JSON.stringify(error.response?.data || error.message))
       if (error.response?.data?.detail) {
         setError(error.response.data.detail)
       } else {
