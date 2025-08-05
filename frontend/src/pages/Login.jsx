@@ -17,6 +17,7 @@ const Login = () => {
     try {
       const API_BASE_URL = 'https://cac-production.up.railway.app'
       console.log('Using API URL:', API_BASE_URL)
+      console.log('Sending login data:', { email, password })
       const response = await axios.post(`${API_BASE_URL}/login`, {
         email,
         password
@@ -28,6 +29,7 @@ const Login = () => {
       // Redirect to dashboard
       navigate('/dashboard')
     } catch (error) {
+      console.log('Login error:', error.response?.data || error.message)
       setError('Invalid email or password')
     } finally {
       setLoading(false)
