@@ -45,6 +45,7 @@ app.add_middleware(
         'https://*.vercel.app',  # Allow Vercel deployments
         'https://*.railway.app',  # Allow Railway deployments
         'https://*.netlify.app',  # Allow Netlify deployments
+        'https://*.onrender.com',  # Allow Render deployments
         'https://cac-o513w0fc6-mr-grumpys-projects.vercel.app',  # Your specific Vercel domain
         '*',  # Allow all origins for development (remove in production)
     ],
