@@ -5,7 +5,9 @@ import AddInvestment from './pages/AddInvestment'
 import EditPurchase from './pages/EditPurchase'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
 import Profile from './pages/Profile'
+import AdminDashboard from './pages/AdminDashboard'
 import Navbar from './components/Navbar'
 
 // Protected Route component
@@ -32,6 +34,7 @@ function App() {
             {/* Public routes */}
             <Route path='/login' element={<Login />} />
             <Route path='/register' element={<Register />} />
+            <Route path='/forgot-password' element={<ForgotPassword />} />
             
             {/* Protected routes */}
             <Route path='/' element={
@@ -80,6 +83,16 @@ function App() {
                   <Navbar />
                   <main className='container mx-auto px-4 py-8'>
                     <Profile />
+                  </main>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path='/admin' element={
+              <ProtectedRoute>
+                <div>
+                  <Navbar />
+                  <main className='container mx-auto px-4 py-8'>
+                    <AdminDashboard />
                   </main>
                 </div>
               </ProtectedRoute>

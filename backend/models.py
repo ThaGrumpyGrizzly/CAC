@@ -7,6 +7,10 @@ class UserCreate(BaseModel):
     email: str = Field(..., description='User email address')
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6)
+    first_name: Optional[str] = Field(None, description='User first name')
+    last_name: Optional[str] = Field(None, description='User last name')
+    phone: Optional[str] = Field(None, description='User phone number')
+    country: Optional[str] = Field(None, description='User country')
 
 class UserLogin(BaseModel):
     email: str = Field(..., description='User email address')
@@ -16,11 +20,40 @@ class UserResponse(BaseModel):
     id: str
     email: str
     username: str
+    first_name: Optional[str]
+    last_name: Optional[str]
+    phone: Optional[str]
+    country: Optional[str]
+    is_admin: str
     created_at: datetime
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = Field(None, description='User first name')
+    last_name: Optional[str] = Field(None, description='User last name')
+    email: Optional[str] = Field(None, description='User email address')
+    phone: Optional[str] = Field(None, description='User phone number')
+    country: Optional[str] = Field(None, description='User country')
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+# Password reset models
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., description='User email address')
+
+class ResetPasswordRequest(BaseModel):
+    email: str = Field(..., description='User email address')
+    reset_token: str = Field(..., description='Reset token from email')
+    new_password: str = Field(..., min_length=6, description='New password')
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., description='Current password')
+    new_password: str = Field(..., min_length=6, description='New password')
+
+class PasswordResetResponse(BaseModel):
+    message: str
+    success: bool
 
 # Existing models
 class Purchase(BaseModel):

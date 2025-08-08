@@ -7,6 +7,11 @@ from datetime import datetime, timedelta
 _exchange_rate_cache = {}
 _cache_duration = timedelta(hours=1)  # Cache for 1 hour
 
+def clear_cache():
+    """Clear the exchange rate cache"""
+    global _exchange_rate_cache
+    _exchange_rate_cache = {}
+
 def get_exchange_rate(from_currency: str, to_currency: str) -> Optional[float]:
     """
     Get exchange rate between two currencies
@@ -125,6 +130,11 @@ def detect_currency_from_ticker(ticker: str) -> str:
     for suffix in european_suffixes:
         if ticker.endswith(suffix):
             return 'EUR'
+    
+    # Some London stocks trade in EUR (like BIRG.L)
+    eur_london_stocks = ['BIRG.L', 'SMT.L', 'FCIT.L']  # Add more as needed
+    if ticker in eur_london_stocks:
+        return 'EUR'
     
     # London exchange typically trades in GBP
     if ticker.endswith('.L'):

@@ -1,15 +1,20 @@
 ﻿import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import axios from 'axios'
+import { useInvestments } from '../context/InvestmentContext'
 
 const Register = () => {
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [country, setCountry] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { register } = useInvestments()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -31,24 +36,15 @@ const Register = () => {
     }
 
     try {
-      const API_BASE_URL = 'https://cac-production.up.railway.app'
-      console.log('Using API URL:', API_BASE_URL)
-      console.log('Sending registration data:', JSON.stringify({ email, username, password }))
-      const response = await axios.post(`${API_BASE_URL}/register`, {
-        email,
-        username,
-        password
-      })
+      console.log('Attempting registration with:', { email, username, password, firstName, lastName, phone, country })
+      const user = await register(email, username, password, { firstName, lastName, phone, country })
+      console.log('Registration successful:', user)
 
       // Registration successful, redirect to login
       navigate('/login', { state: { message: 'Registration successful! Please log in.' } })
     } catch (error) {
-      console.log('Registration error:', JSON.stringify(error.response?.data || error.message))
-      if (error.response?.data?.detail) {
-        setError(error.response.data.detail)
-      } else {
-        setError('Registration failed. Please try again.')
-      }
+      console.log('Registration error:', error.message)
+      setError(error.message)
     } finally {
       setLoading(false)
     }
@@ -94,6 +90,58 @@ const Register = () => {
               className='appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
             />
           </div>
+          
+          {/* Profile Information Section */}
+          <div className='border-t border-gray-200 pt-4'>
+            <h3 className='text-lg font-medium text-gray-900 mb-4'>Profile Information</h3>
+            <div className='grid grid-cols-2 gap-4'>
+              <div>
+                <input
+                  type='text'
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder='First Name'
+                  className='appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
+                />
+              </div>
+              <div>
+                <input
+                  type='text'
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder='Last Name'
+                  className='appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
+                />
+              </div>
+            </div>
+            <div className='mt-4'>
+              <input
+                type='tel'
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder='Phone Number (optional)'
+                className='appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
+              />
+            </div>
+            <div className='mt-4'>
+              <select
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className='appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
+              >
+                <option value=''>Select Country</option>
+                <option value='Belgium'>Belgium</option>
+                <option value='Netherlands'>Netherlands</option>
+                <option value='Germany'>Germany</option>
+                <option value='France'>France</option>
+                <option value='United Kingdom'>United Kingdom</option>
+                <option value='United States'>United States</option>
+                <option value='Canada'>Canada</option>
+                <option value='Other'>Other</option>
+              </select>
+            </div>
+          </div>
+          
           <div>
             <input
               type='password'
@@ -111,7 +159,7 @@ const Register = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder='Confirm password'
-              className='appearance-none rounded-block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
+              className='appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
             />
           </div>
           <div>

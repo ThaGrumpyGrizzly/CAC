@@ -1,37 +1,72 @@
 #!/bin/bash
 
-echo "🚀 Investment Tracker Deployment Script"
-echo "======================================"
+echo "🚀 Coffee Investment Tracker - Deployment Helper"
+echo "================================================"
+echo ""
 
 # Check if git is initialized
 if [ ! -d ".git" ]; then
-    echo "📁 Initializing git repository..."
-    git init
-    git add .
-    git commit -m "Initial commit - Investment Tracker App"
-    echo "✅ Git repository initialized"
+    echo "❌ Git repository not found!"
+    echo "Please initialize git and push your code to GitHub first:"
+    echo "  git init"
+    echo "  git add ."
+    echo "  git commit -m 'Initial commit'"
+    echo "  git remote add origin https://github.com/yourusername/your-repo-name.git"
+    echo "  git push -u origin main"
     echo ""
-    echo "⚠️  IMPORTANT: You need to create a GitHub repository and connect it:"
-    echo "1. Go to https://github.com/new"
-    echo "2. Create a new repository"
-    echo "3. Run: git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git"
-    echo "4. Run: git push -u origin main"
-    echo ""
-else
-    echo "📝 Committing latest changes..."
-    git add .
-    git commit -m "Update: Prepare for cloud deployment"
-    echo "✅ Changes committed"
-    echo ""
-    echo "📤 Pushing to GitHub..."
-    git push
-    echo "✅ Code pushed to GitHub"
-    echo ""
+    exit 1
 fi
 
-echo "🎯 Next Steps:"
-echo "1. Deploy backend to Railway: https://railway.app/"
-echo "2. Deploy frontend to Vercel: https://vercel.com/"
-echo "3. Connect them using the guide in DEPLOYMENT.md"
+echo "✅ Git repository found"
 echo ""
-echo "📖 See DEPLOYMENT.md for detailed instructions" 
+
+# Check if backend files exist
+if [ -f "backend/app.py" ]; then
+    echo "✅ Backend files found"
+else
+    echo "❌ Backend files not found in backend/ directory"
+    exit 1
+fi
+
+# Check if frontend files exist
+if [ -f "frontend/package.json" ]; then
+    echo "✅ Frontend files found"
+else
+    echo "❌ Frontend files not found in frontend/ directory"
+    exit 1
+fi
+
+echo ""
+echo "📋 Deployment Checklist:"
+echo "========================"
+echo ""
+echo "1. ✅ Code is in GitHub repository"
+echo "2. ✅ Backend files present"
+echo "3. ✅ Frontend files present"
+echo ""
+echo "🔧 Next Steps:"
+echo "=============="
+echo ""
+echo "1. Deploy Backend (Railway):"
+echo "   - Go to https://railway.app"
+echo "   - Sign up with GitHub"
+echo "   - Click 'New Project' → 'Deploy from GitHub repo'"
+echo "   - Select your repository"
+echo "   - Set environment variables:"
+echo "     DATABASE_URL=your_supabase_connection_string"
+echo "     SECRET_KEY=your_secret_key_here"
+echo "     ALGORITHM=HS256"
+echo "     ACCESS_TOKEN_EXPIRE_MINUTES=30"
+echo ""
+echo "2. Deploy Frontend (Vercel):"
+echo "   - Go to https://vercel.com"
+echo "   - Sign up with GitHub"
+echo "   - Click 'New Project' → Import your repository"
+echo "   - Set root directory to 'frontend'"
+echo "   - Add environment variables (see DEPLOYMENT.md)"
+echo ""
+echo "3. Update CORS settings in backend/app.py if needed"
+echo ""
+echo "📖 For detailed instructions, see DEPLOYMENT.md"
+echo ""
+echo "🎉 Your app will be live once both deployments are complete!"

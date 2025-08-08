@@ -1,17 +1,30 @@
 import { useState, useEffect } from 'react'
 import { useInvestments } from '../context/InvestmentContext'
-import { User, Settings, Bell, Shield, Globe, DollarSign, TrendingUp, Save } from 'lucide-react'
+import { User, Settings, Bell, Shield, Globe, DollarSign, TrendingUp, Save, Lock } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
+import axios from 'axios'
 
 const Profile = () => {
   const { user, loading, error } = useInvestments()
   const [isEditing, setIsEditing] = useState(false)
   const [saveLoading, setSaveLoading] = useState(false)
+  const [userProfile, setUserProfile] = useState(null)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const [preferences, setPreferences] = useState({
     // Personal Information
     firstName: '',
     lastName: '',
+    email: '',
     phone: '',
+    country: '',
     
     // Investment Preferences
     defaultCurrency: 'EUR',
@@ -40,11 +53,52 @@ const Profile = () => {
     taxLossHarvesting: false
   })
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await axios.get(`${API_BASE_URL}/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      console.log('Fetched user profile:', response.data)
+      setUserProfile(response.data)
+      
+      // Pre-fill preferences with user data
+      setPreferences(prev => ({
+        ...prev,
+        firstName: response.data.first_name || '',
+        lastName: response.data.last_name || '',
+        email: response.data.email || '',
+        phone: response.data.phone || '',
+        country: response.data.country || ''
+      }))
+    } catch (err) {
+      console.error('Error fetching user profile:', err)
+    }
+  }
+
   useEffect(() => {
-    // Load user preferences from localStorage or API
+    // Fetch user profile data first
+    fetchUserProfile()
+    
+    // Then load other preferences from localStorage
     const savedPreferences = localStorage.getItem('userPreferences')
     if (savedPreferences) {
-      setPreferences(JSON.parse(savedPreferences))
+      const parsed = JSON.parse(savedPreferences)
+      setPreferences(prev => ({
+        ...prev,
+        ...parsed,
+                 // Don't override profile data from API
+         firstName: prev.firstName || parsed.firstName || '',
+         lastName: prev.lastName || parsed.lastName || '',
+         email: prev.email || parsed.email || '',
+         phone: prev.phone || parsed.phone || '',
+         country: prev.country || parsed.country || ''
+      }))
     }
   }, [])
 
@@ -58,14 +112,45 @@ const Profile = () => {
   const handleSave = async () => {
     setSaveLoading(true)
     try {
-      // Save to localStorage (in the future, this would be an API call)
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No authentication token found')
+      }
+
+      console.log('Sending profile update:', {
+        first_name: preferences.firstName,
+        last_name: preferences.lastName,
+        email: preferences.email,
+        phone: preferences.phone,
+        country: preferences.country
+      })
+
+      // Update user profile in database
+      const response = await axios.put(`${API_BASE_URL}/profile`, {
+        first_name: preferences.firstName,
+        last_name: preferences.lastName,
+        email: preferences.email,
+        phone: preferences.phone,
+        country: preferences.country
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      console.log('Profile update response:', response.data)
+
+      // Update local user profile state
+      setUserProfile(response.data)
+      
+      // Save other preferences to localStorage
       localStorage.setItem('userPreferences', JSON.stringify(preferences))
       setIsEditing(false)
+      
       // Show success message
-      alert('Preferences saved successfully!')
+      alert('Profile updated successfully!')
     } catch (error) {
-      console.error('Error saving preferences:', error)
-      alert('Failed to save preferences. Please try again.')
+      console.error('Error saving profile:', error)
+      console.error('Error details:', error.response?.data)
+      alert(`Failed to save profile: ${error.response?.data?.detail || error.message}`)
     } finally {
       setSaveLoading(false)
     }
@@ -78,6 +163,50 @@ const Profile = () => {
       setPreferences(JSON.parse(savedPreferences))
     }
     setIsEditing(false)
+  }
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    setPasswordLoading(true)
+    setPasswordError('')
+    setPasswordMessage('')
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match')
+      setPasswordLoading(false)
+      return
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long')
+      setPasswordLoading(false)
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.post(`${API_BASE_URL}/change-password`, {
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.data.success) {
+        setPasswordMessage('Password changed successfully!')
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        })
+        setShowPasswordChange(false)
+      }
+    } catch (error) {
+      console.error('Error changing password:', error)
+      setPasswordError(error.response?.data?.detail || 'Failed to change password. Please try again.')
+    } finally {
+      setPasswordLoading(false)
+    }
   }
 
   if (loading) {
@@ -135,6 +264,34 @@ const Profile = () => {
         </div>
       </div>
 
+      {/* User Information Summary */}
+      {userProfile && (
+        <div className="card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <div className="flex items-center mb-4">
+            <User className="w-5 h-5 text-blue-600 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-900">Account Information</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <p className="text-gray-900 font-medium">{userProfile.email}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <p className="text-gray-900 font-medium">{userProfile.username}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
+              <p className="text-gray-900">{new Date(userProfile.created_at).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
+              <p className="text-gray-900">{userProfile.is_admin ? 'Administrator' : 'Standard User'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Personal Information */}
         <div className="lg:col-span-2 space-y-6">
@@ -169,17 +326,23 @@ const Profile = () => {
                   className="form-input"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={user?.email || ''}
-                  disabled
-                  className="form-input bg-gray-50"
-                />
-              </div>
+                             <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                   Email
+                 </label>
+                 <input
+                   type="email"
+                   value={preferences.email || userProfile?.email || ''}
+                   onChange={(e) => handlePreferenceChange('email', e.target.value)}
+                   disabled={!isEditing}
+                   className={!isEditing ? "form-input bg-gray-50" : "form-input"}
+                 />
+                 {isEditing && (
+                   <p className="text-xs text-gray-500 mt-1">
+                     Changing your email will affect your login credentials
+                   </p>
+                 )}
+               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phone
@@ -193,6 +356,109 @@ const Profile = () => {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Password Change */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Lock className="w-5 h-5 text-primary-600 mr-2" />
+                <h2 className="text-xl font-semibold text-gray-900">Password</h2>
+              </div>
+              {!showPasswordChange && (
+                <button
+                  onClick={() => setShowPasswordChange(true)}
+                  className="text-sm text-indigo-600 hover:text-indigo-500"
+                >
+                  Change Password
+                </button>
+              )}
+            </div>
+            
+            {showPasswordChange ? (
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                {passwordError && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    {passwordError}
+                  </div>
+                )}
+                {passwordMessage && (
+                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                    {passwordMessage}
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    className="form-input"
+                  />
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="btn-primary flex items-center"
+                  >
+                    {passwordLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    {passwordLoading ? 'Changing...' : 'Change Password'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordChange(false)
+                      setPasswordData({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                      })
+                      setPasswordError('')
+                      setPasswordMessage('')
+                    }}
+                    className="btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p className="text-gray-600 text-sm">
+                Keep your account secure by using a strong password that you don't use elsewhere.
+              </p>
+            )}
           </div>
 
           {/* Investment Preferences */}

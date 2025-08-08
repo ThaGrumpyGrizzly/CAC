@@ -175,7 +175,7 @@ def _get_mock_price(ticker: str) -> float:
         'COLR.BR': (30, 50),  # Colruyt in EUR
         
         # UK stocks (GBP)
-        'BIRG.L': (8, 12),  # Bank of Ireland Group PLC
+        'BIRG.L': (8, 12),  # Bank of Ireland Group PLC (in EUR)
         
         # Irish stocks (EUR)
         'BIRG.IE': (8, 12),  # Bank of Ireland Group PLC (Irish exchange)

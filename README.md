@@ -11,14 +11,17 @@ A modern web application for tracking your investment portfolio with real-time s
 - 🗑️ **Delete Investments** - Remove positions from your portfolio
 - 📱 **Responsive Design** - Works on desktop and mobile devices
 - 🎨 **Modern UI** - Clean interface built with React and Tailwind CSS
+- 🔐 **Authentication** - Secure login with JWT tokens
+- 👑 **Admin Dashboard** - Stock analytics and user management
 
 ## Tech Stack
 
 ### Backend
 - **FastAPI** - Modern Python web framework
 - **SQLAlchemy** - Database ORM
-- **PostgreSQL/SQLite** - Database options
+- **SQLite** - Local database for development
 - **Yahoo Finance API** - Real-time stock data
+- **JWT** - Authentication tokens
 
 ### Frontend
 - **React 18** - Modern React with hooks
@@ -26,6 +29,8 @@ A modern web application for tracking your investment portfolio with real-time s
 - **Vite** - Fast build tool
 - **Axios** - HTTP client
 - **React Router** - Client-side routing
+- **Firebase** - Authentication and hosting
+- **Supabase** - Database and backend services
 
 ## Quick Start
 
@@ -41,31 +46,14 @@ A modern web application for tracking your investment portfolio with real-time s
    cd backend
    ```
 
-2. **Create virtual environment:**
+2. **Install dependencies:**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install fastapi uvicorn requests pydantic sqlalchemy python-dotenv python-multipart passlib python-jose PyJWT
    ```
 
-3. **Install dependencies:**
+3. **Start the backend server:**
    ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up environment variables:**
-   ```bash
-   cp ../env.example .env
-   # Edit .env file with your database settings
-   ```
-
-5. **Initialize database:**
-   ```bash
-   python database.py
-   ```
-
-6. **Start the backend server:**
-   ```bash
-   python app.py
+   py start.py
    ```
    
    The API will be available at `http://localhost:8000`
@@ -87,21 +75,18 @@ A modern web application for tracking your investment portfolio with real-time s
    npm run dev
    ```
    
-   The frontend will be available at `http://localhost:3000`
-
-## Database Configuration
-
-### Option 1: SQLite (Development)
-Set `USE_SQLITE=true` in your `.env` file. This creates a local SQLite database file.
-
-### Option 2: PostgreSQL (Production)
-1. Install PostgreSQL
-2. Create a database
-3. Set database connection string in `.env` file
+   The frontend will be available at `http://localhost:5173`
 
 ## API Documentation
 
 Once the backend is running, visit `http://localhost:8000/docs` for interactive API documentation.
+
+## Admin Access
+
+To access the admin dashboard:
+1. Log in to your account
+2. Click "Make Me Admin" button on the admin page
+3. Refresh the page to see admin features
 
 ## Contributing
 

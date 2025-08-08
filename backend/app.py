@@ -1,7 +1,7 @@
 ﻿from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from models import Investment, Purchase, UpdatePurchase, UserCreate, UserLogin, UserResponse, Token
+from models import Investment, Purchase, UpdatePurchase, UserCreate, UserLogin, UserResponse, UserUpdate, Token, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, PasswordResetResponse
 from services.finance_api import get_current_price, search_stocks, get_stock_suggestions
 from services.analytics import calculate_profit
 from services.investment_aggregator import (
@@ -15,6 +15,14 @@ from services.investment_aggregator import (
 from services.auth_simple import (
     get_password_hash, authenticate_user, create_access_token, 
     get_current_user, get_user_by_email, get_user_by_username
+)
+from services.password_reset import (
+    generate_reset_token, store_reset_token, verify_reset_token,
+    clear_reset_token, reset_user_password, change_user_password
+)
+from services.admin_service import (
+    get_all_users, get_user_details, get_top_investments, get_user_statistics,
+    make_user_admin, remove_admin_status, delete_user, get_popular_tickers, get_stock_analytics
 )
 from database import get_db, InvestmentDB, UserDB
 from sqlalchemy.orm import Session
@@ -112,7 +120,11 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = UserDB(
         email=user.email,
         username=user.username,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        phone=user.phone,
+        country=user.country
     )
     db.add(db_user)
     db.commit()
@@ -122,6 +134,10 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         id=db_user.id,
         email=db_user.email,
         username=db_user.username,
+        first_name=db_user.first_name,
+        last_name=db_user.last_name,
+        phone=db_user.phone,
+        country=db_user.country,
         created_at=db_user.created_at
     )
 
@@ -136,6 +152,141 @@ def login_user(user_credentials: UserLogin, db: Session = Depends(get_db)):
         expires_delta=timedelta(minutes=30)
     )
     return {'access_token': access_token, 'token_type': 'bearer'}
+
+@app.post('/forgot-password', response_model=PasswordResetResponse)
+def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Request password reset"""
+    user = get_user_by_email(db, request.email)
+    if not user:
+        # Don't reveal if user exists or not for security
+        return PasswordResetResponse(
+            message="If an account with this email exists, a password reset link has been sent.",
+            success=True
+        )
+    
+    # Generate reset token
+    reset_token = generate_reset_token()
+    store_reset_token(request.email, reset_token)
+    
+    # In a real application, send email here
+    # For now, we'll just return the token in the response for testing
+    print(f"Password reset token for {request.email}: {reset_token}")
+    
+    return PasswordResetResponse(
+        message="Password reset link sent to your email. Check the console for the token.",
+        success=True
+    )
+
+@app.post('/reset-password', response_model=PasswordResetResponse)
+def reset_password(request: ResetPasswordRequest):
+    """Reset password using token"""
+    if not verify_reset_token(request.email, request.reset_token):
+        raise HTTPException(status_code=400, detail='Invalid or expired reset token')
+    
+    success = reset_user_password(request.email, request.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail='Failed to reset password')
+    
+    # Clear the used token
+    clear_reset_token(request.email)
+    
+    return PasswordResetResponse(
+        message="Password reset successful. You can now login with your new password.",
+        success=True
+    )
+
+@app.post('/change-password', response_model=PasswordResetResponse)
+def change_password(request: ChangePasswordRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Change password (requires authentication)"""
+    user = get_current_user(credentials.credentials)
+    if not user:
+        raise HTTPException(status_code=401, detail='Invalid token')
+    
+    success = change_user_password(user.email, request.current_password, request.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail='Current password is incorrect')
+    
+    return PasswordResetResponse(
+        message="Password changed successfully.",
+        success=True
+    )
+
+@app.get('/profile', response_model=UserResponse)
+def get_user_profile(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    user = get_current_user(credentials.credentials)
+    if not user:
+        raise HTTPException(status_code=401, detail='Invalid token')
+    
+    # Debug output
+    print(f"DEBUG: User admin status: {user.is_admin}, Type: {type(user.is_admin)}")
+    
+    response = UserResponse(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        phone=user.phone,
+        country=user.country,
+        is_admin=user.is_admin,
+        created_at=user.created_at
+    )
+    
+    print(f"DEBUG: Response admin status: {response.is_admin}")
+    return response
+
+@app.put('/profile', response_model=UserResponse)
+def update_user_profile(user_update: UserUpdate, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    # Get user from token
+    token_user = get_current_user(credentials.credentials)
+    if not token_user:
+        raise HTTPException(status_code=401, detail='Invalid token')
+    
+    # Get user from database session
+    user = db.query(UserDB).filter(UserDB.id == token_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    # Update user fields
+    if user_update.first_name is not None:
+        user.first_name = user_update.first_name
+    if user_update.last_name is not None:
+        user.last_name = user_update.last_name
+    if user_update.email is not None:
+        # Check if email is already taken by another user
+        existing_user = db.query(UserDB).filter(UserDB.email == user_update.email, UserDB.id != user.id).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail='Email already registered')
+        user.email = user_update.email
+    if user_update.phone is not None:
+        user.phone = user_update.phone
+    if user_update.country is not None:
+        user.country = user_update.country
+    
+    # Update the updated_at timestamp
+    user.updated_at = datetime.utcnow()
+    
+    try:
+        db.commit()
+        db.refresh(user)
+        
+        # Return updated user profile
+        response = UserResponse(
+            id=user.id,
+            email=user.email,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            phone=user.phone,
+            country=user.country,
+            is_admin=user.is_admin,
+            created_at=user.created_at
+        )
+        return response
+    except Exception as e:
+        db.rollback()
+        print(f"Error updating profile: {e}")
+        raise HTTPException(status_code=500, detail=f'Failed to update profile: {str(e)}')
 
 # Protected endpoints
 @app.post('/investment')
@@ -325,6 +476,66 @@ def get_suggestions(query: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get('/test-stock-price/{ticker}')
+def test_stock_price(ticker: str):
+    """Test endpoint to get current stock price"""
+    try:
+        from services.stock_price_service import stock_price_service
+        price = stock_price_service.get_stock_price(ticker)
+        if price:
+            return {'ticker': ticker, 'current_price': price, 'status': 'success'}
+        else:
+            return {'ticker': ticker, 'current_price': None, 'status': 'not_found'}
+    except ImportError as e:
+        return {'ticker': ticker, 'error': f'Import error: {str(e)}', 'status': 'error'}
+    except Exception as e:
+        return {'ticker': ticker, 'error': str(e), 'status': 'error'}
+
+@app.get('/debug-stock-prices')
+def debug_stock_prices():
+    """Debug endpoint to test stock price service"""
+    try:
+        from services.stock_price_service import stock_price_service
+        from services.admin_service import get_stock_analytics
+        
+        # Test individual stock prices
+        test_results = {}
+        test_tickers = ['NKE', 'BEL.BR', 'BIRG.L', 'COLR.BR']
+        
+        for ticker in test_tickers:
+            try:
+                price = stock_price_service.get_stock_price(ticker)
+                test_results[ticker] = {
+                    'price': price,
+                    'status': 'success' if price else 'no_price'
+                }
+            except Exception as e:
+                test_results[ticker] = {
+                    'price': None,
+                    'status': 'error',
+                    'error': str(e)
+                }
+        
+        # Test the full analytics function
+        try:
+            analytics = get_stock_analytics()
+            return {
+                'individual_tests': test_results,
+                'analytics_function': 'success',
+                'analytics_data': analytics
+            }
+        except Exception as e:
+            return {
+                'individual_tests': test_results,
+                'analytics_function': 'error',
+                'analytics_error': str(e)
+            }
+            
+    except ImportError as e:
+        return {'error': f'Import error: {str(e)}'}
+    except Exception as e:
+        return {'error': f'General error: {str(e)}'}
+
 def _get_fallback_search_results(query: str) -> List[Dict]:
     """Fallback search results when external APIs fail"""
     query_lower = query.lower()
@@ -365,6 +576,137 @@ def _get_fallback_search_results(query: str) -> List[Dict]:
             results.append(stock)
     
     return results[:10]  # Return top 10 results
-#  Force Railway redeploy  -  08/05/2025 15:29:08
 
-#  Force Railway redeploy  -  08/05/2025 15:31:47
+# Admin endpoints
+def check_admin_permissions(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Check if user has admin permissions"""
+    user = get_current_user(credentials.credentials)
+    if not user:
+        raise HTTPException(status_code=401, detail='Invalid token')
+    
+    # Check if user is admin
+    if user.is_admin != 'true':
+        raise HTTPException(status_code=403, detail='Admin access required')
+    
+    return user
+
+@app.get('/admin/users')
+def get_users_admin(admin_user = Depends(check_admin_permissions)):
+    """Get all users (admin only)"""
+    try:
+        users = get_all_users()
+        return {'users': users}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get('/admin/users/{user_id}')
+def get_user_details_admin(user_id: str, admin_user = Depends(check_admin_permissions)):
+    """Get detailed user information (admin only)"""
+    try:
+        user_details = get_user_details(user_id)
+        if user_details:
+            return user_details
+        else:
+            raise HTTPException(status_code=404, detail='User not found')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get('/admin/statistics')
+def get_admin_statistics(admin_user = Depends(check_admin_permissions)):
+    """Get overall statistics (admin only)"""
+    try:
+        stats = get_user_statistics()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get('/admin/top-investments')
+def get_top_investments_admin(limit: int = 10, admin_user = Depends(check_admin_permissions)):
+    """Get top investments across all users (admin only)"""
+    try:
+        top_investments = get_top_investments(limit)
+        return {'top_investments': top_investments}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get('/admin/popular-tickers')
+def get_popular_tickers_admin(admin_user = Depends(check_admin_permissions)):
+    """Get most popular tickers (admin only)"""
+    try:
+        popular_tickers = get_popular_tickers()
+        return {'popular_tickers': popular_tickers}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get('/admin/stock-analytics')
+def get_stock_analytics_admin(admin_user = Depends(check_admin_permissions)):
+    """Get stock analytics with user counts and average buy prices (admin only)"""
+    try:
+        result = get_stock_analytics()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post('/admin/users/{user_id}/make-admin')
+def make_user_admin_endpoint(user_id: str, admin_user = Depends(check_admin_permissions)):
+    """Make a user an admin (admin only)"""
+    try:
+        success = make_user_admin(user_id)
+        if success:
+            return {'message': 'User made admin successfully'}
+        else:
+            raise HTTPException(status_code=404, detail='User not found')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post('/admin/users/{user_id}/remove-admin')
+def remove_admin_status_endpoint(user_id: str, admin_user = Depends(check_admin_permissions)):
+    """Remove admin status from a user (admin only)"""
+    try:
+        success = remove_admin_status(user_id)
+        if success:
+            return {'message': 'Admin status removed successfully'}
+        else:
+            raise HTTPException(status_code=404, detail='User not found')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete('/admin/users/{user_id}')
+def delete_user_admin(user_id: str, admin_user = Depends(check_admin_permissions)):
+    """Delete a user and all their purchases (admin only)"""
+    try:
+        success = delete_user(user_id)
+        if success:
+            return {'message': 'User deleted successfully'}
+        else:
+            raise HTTPException(status_code=404, detail='User not found')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post('/make-me-admin')
+def make_me_admin_endpoint(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Make the current user an admin (for testing)"""
+    try:
+        user = get_current_user(credentials.credentials)
+        if not user:
+            raise HTTPException(status_code=401, detail='Invalid token')
+        
+        # Make user admin
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            db_user = db.query(UserDB).filter(UserDB.id == user.id).first()
+            if db_user:
+                db_user.is_admin = 'true'
+                db.commit()
+                return {'message': 'User made admin successfully', 'user_id': user.id}
+            else:
+                raise HTTPException(status_code=404, detail='User not found')
+        finally:
+            db.close()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

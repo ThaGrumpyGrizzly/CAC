@@ -90,9 +90,9 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {investments.map((investment) => (
+            {investments.map((investment, index) => (
               <InvestmentCard 
-                key={investment.id} 
+                key={investment.id || `investment-${index}`} 
                 investment={investment} 
               />
             ))}

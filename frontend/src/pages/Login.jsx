@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import axios from 'axios'
+import { useInvestments } from '../context/InvestmentContext'
 
 const Login = () => {
   const [email, setEmail] = useState('')
@@ -8,6 +8,7 @@ const Login = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { login } = useInvestments()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -15,22 +16,14 @@ const Login = () => {
     setError('')
 
     try {
-      const API_BASE_URL = 'https://cac-production.up.railway.app'
-      console.log('Using API URL:', API_BASE_URL)
-      console.log('Sending login data:', JSON.stringify({ email, password }))
-      console.log('Making request to:', `${API_BASE_URL}/login`)
-      const response = await axios.post(`${API_BASE_URL}/login`, {
-        email,
-        password
-      })
-
-      // Store token
-      localStorage.setItem('token', response.data.access_token)
+      console.log('Attempting login with:', { email, password })
+      const user = await login(email, password)
+      console.log('Login successful:', user)
       
       // Redirect to dashboard
       navigate('/dashboard')
     } catch (error) {
-      console.log('Login error:', JSON.stringify(error.response?.data || error.message))
+      console.log('Login error:', error.message)
       setError('Invalid email or password')
     } finally {
       setLoading(false)
@@ -76,6 +69,11 @@ const Login = () => {
               placeholder='Password'
               className='appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm'
             />
+          </div>
+          <div className="text-right">
+            <Link to='/forgot-password' className='text-sm text-indigo-600 hover:text-indigo-500'>
+              Forgot your password?
+            </Link>
           </div>
           <div>
             <button

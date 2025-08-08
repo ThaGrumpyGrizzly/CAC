@@ -18,7 +18,7 @@ export const InvestmentProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState(null)
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://cac-production.up.railway.app'
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
   // Check if user is authenticated on mount
   useEffect(() => {
@@ -133,12 +133,16 @@ export const InvestmentProvider = ({ children }) => {
     }
   }
 
-  const register = async (email, username, password) => {
+  const register = async (email, username, password, profileData = {}) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/register`, {
         email,
         username,
-        password
+        password,
+        first_name: profileData.firstName || null,
+        last_name: profileData.lastName || null,
+        phone: profileData.phone || null,
+        country: profileData.country || null
       })
       return response.data
     } catch (err) {
