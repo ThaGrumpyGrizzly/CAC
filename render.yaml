@@ -4,8 +4,8 @@ services:
     name: coffee-backend
     env: python
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r backend/requirements_minimal.txt
+    startCommand: cd backend && uvicorn app_simple:app --host 0.0.0.0 --port $PORT
 
   # Frontend Service
   - type: web
